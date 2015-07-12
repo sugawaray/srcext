@@ -7,6 +7,8 @@ my $rinclude = '^#include\s+' . $rpath;
 
 use Cwd 'abs_path', 'getcwd';
 
+# This subroutine collects files which the 1st argument file includes
+# and inserts them into the 2nd argument hash.
 sub collect {
 	my ($file, $deps) = @_;
 	my @d = ();
@@ -28,7 +30,11 @@ sub collect {
 	close $in or die "can not close the input file.";
 };
 
-sub collectall {
+# This subroutine collects files which the 1st argument file includes.
+# And It also collects files which files included by the 1st argument file
+# include, recursively. It inserts all collected files into the 2nd argument
+# hash.
+sub collect_recur {
 	my ($file, $deps) = @_;
 	&collect($file, $deps);
 	my $deplist = %{$deps}{&abs_path($file)};
@@ -39,13 +45,15 @@ sub collectall {
 		chdir $path;
 	}
 	for (my $i = 0; $i < scalar @{$deplist}; ++$i) {
-		&collectall(@{$deplist}[$i], $deps);
+		&collect_recur(@{$deplist}[$i], $deps);
 	}
 	chdir $origcwd;
 };
 
+# The key is an absolute path of a file.
+# The value is a list of files which the file of the key includes.
 my %dependencies = ();
-&collectall($ARGV[0], \%dependencies);
+&collect_recur($ARGV[0], \%dependencies);
 
 for my $file (keys %dependencies) {
 	printf "%s:", $file;
