@@ -2,6 +2,8 @@
 
 use strict;
 
+my @incpath = ( 'incdir1' );
+
 my $rpath = '("[^"]+"|<[^>]+>)';
 my $rinclude = '^#include\s+' . $rpath;
 
@@ -30,7 +32,6 @@ sub rmparen {
 sub collect {
 	my ($file, $deps) = @_;
 	my @d = ();
-	$file = &rmparen($file);
 	my $abspath = &abs_path($file);
 	$deps->{$abspath} = \@d;
 	my $in;
@@ -52,14 +53,19 @@ sub collect {
 # hash.
 sub collect_recur {
 	my ($file, $deps) = @_;
-	&collect($file, $deps);
-	my $deplist = %{$deps}{&abs_path(&rmparen($file))};
 	my $origcwd = &getcwd();
-	if ($file =~ /\/[^\/]*$/) {
-		my $path = &rmparen($file);
+	my $abs = &isabs($file);
+	$file = &rmparen($file);
+	if ($abs) {
+		chdir $incpath[0];
+	} elsif ($file =~ /\/[^\/]*$/) {
+		my $path = $file;
 		$path =~ s#/[^/]*$#/#;
+		$file = substr $file, length($path);
 		chdir $path;
 	}
+	&collect($file, $deps);
+	my $deplist = %{$deps}{&abs_path($file)};
 	for (my $i = 0; $i < scalar @{$deplist}; ++$i) {
 		&collect_recur(@{$deplist}[$i], $deps);
 	}
