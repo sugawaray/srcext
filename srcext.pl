@@ -2,7 +2,9 @@
 
 use strict;
 
-my @incpath = ( 'incdir1' );
+my @incpath = ( 'incdir1', 'incdir2' );
+scalar @incpath == 2 or die 'incpath1';
+$incpath[1] eq 'incdir2' or die 'incpath2';
 
 my $rpath = '("[^"]+"|<[^>]+>)';
 my $rinclude = '^#include\s+' . $rpath;
@@ -32,11 +34,12 @@ sub rmparen {
 sub collect {
 	my ($file, $deps) = @_;
 	my @d = ();
-	my $abspath = &abs_path($file);
-	$deps->{$abspath} = \@d;
+	if (!defined $file) {
+		return 1;
+	}
+	$deps->{$file} = \@d;
 	my $in;
-	open($in, '<', $file)
-		or die "can not open an input file(" . $file .")";
+	open($in, '<', $file) or return 1;
 	while (<$in>) {
 		chomp;
 		if (/$rinclude/) {
@@ -45,6 +48,7 @@ sub collect {
 		}
 	}
 	close $in or die "can not close the input file.";
+	return 0;
 };
 
 # This subroutine collects files which the 1st argument file includes.
@@ -57,14 +61,22 @@ sub collect_recur {
 	my $abs = &isabs($file);
 	$file = &rmparen($file);
 	if ($abs) {
-		chdir $incpath[0];
+		for (my $i = 0; $i < scalar @incpath; ++$i) {
+			chdir $incpath[$i];
+			if (&collect(&abs_path($file), $deps) == 0) {
+				last;
+			}
+			chdir $origcwd;
+		}
 	} elsif ($file =~ /\/[^\/]*$/) {
 		my $path = $file;
 		$path =~ s#/[^/]*$#/#;
 		$file = substr $file, length($path);
 		chdir $path;
+		&collect(&abs_path($file), $deps);
+	} else {
+		&collect(&abs_path($file), $deps);
 	}
-	&collect($file, $deps);
 	my $deplist = %{$deps}{&abs_path($file)};
 	for (my $i = 0; $i < scalar @{$deplist}; ++$i) {
 		&collect_recur(@{$deplist}[$i], $deps);
