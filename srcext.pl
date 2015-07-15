@@ -9,8 +9,6 @@ $incpath[1] eq 'incdir2' or die 'incpath2';
 my $rpath = '("[^"]+"|<[^>]+>)';
 my $rinclude = '^#include\s+' . $rpath;
 
-use Cwd 'abs_path', 'getcwd';
-
 sub isabs {
 	my ($s) = @_;
 	$s = substr $s, 0, 1;
@@ -34,9 +32,6 @@ sub rmparen {
 sub collect {
 	my ($file, $deps) = @_;
 	my @d = ();
-	if (!defined $file) {
-		return 1;
-	}
 	$deps->{$file} = \@d;
 	my $in;
 	open($in, '<', $file) or return 1;
@@ -51,43 +46,50 @@ sub collect {
 	return 0;
 };
 
+sub getdir {
+	my ($s) = @_;
+	if ($s =~ /\//) {
+		$s =~ s#/[^/]*$##;
+	} else {
+		$s = '.';
+	}
+	return $s;
+}
+
+(&getdir('./dir/file1') cmp './dir') == 0 or die 'getdir1';
+(&getdir('dir') cmp '.') == 0 or die 'getdir2';
+
 # This subroutine collects files which the 1st argument file includes.
 # And It also collects files which files included by the 1st argument file
 # include, recursively. It inserts all collected files into the 2nd argument
 # hash.
 sub collect_recur {
-	my ($file, $deps) = @_;
-	my $origcwd = &getcwd();
+	my ($file, $deps, $dir) = @_;
 	my $abs = &isabs($file);
 	$file = &rmparen($file);
 	if ($abs) {
+		my $tmp;
 		for (my $i = 0; $i < scalar @incpath; ++$i) {
-			chdir $incpath[$i];
-			if (&collect(&abs_path($file), $deps) == 0) {
+			$tmp = $incpath[$i] . '/' . $file;
+			if (&collect($tmp, $deps) == 0) {
 				last;
 			}
-			chdir $origcwd;
 		}
-	} elsif ($file =~ /\/[^\/]*$/) {
-		my $path = $file;
-		$path =~ s#/[^/]*$#/#;
-		$file = substr $file, length($path);
-		chdir $path;
-		&collect(&abs_path($file), $deps);
+		$file = $tmp;
 	} else {
-		&collect(&abs_path($file), $deps);
+		$file = $dir . '/' . $file;
+		&collect($file, $deps);
 	}
-	my $deplist = %{$deps}{&abs_path($file)};
+	my $deplist = %{$deps}{$file};
 	for (my $i = 0; $i < scalar @{$deplist}; ++$i) {
-		&collect_recur(@{$deplist}[$i], $deps);
+		&collect_recur(@{$deplist}[$i], $deps, &getdir($file));
 	}
-	chdir $origcwd;
 };
 
 # The key is an absolute path of a file.
 # The value is a list of files which the file of the key includes.
 my %dependencies = ();
-&collect_recur('"' . $ARGV[0] . '"', \%dependencies);
+&collect_recur('"' . $ARGV[2] . '"', \%dependencies, &getdir($ARGV[2]));
 
 for my $file (keys %dependencies) {
 	printf "%s:", $file;
@@ -99,4 +101,30 @@ for my $file (keys %dependencies) {
 		printf "%s", @{$d}[scalar @{$d} - 1];
 	}
 	printf "\n";
+}
+
+use File::Copy;
+
+sub create_dirtree {
+	my ($dir, $maxtree) = @_;
+	mkdir($dir);
+	my $p = index($maxtree, '/', length($dir) + 1);
+	if ($p >= 0) {
+		$dir = substr($maxtree, 0, $p + length($dir));
+		&create_dirtree($dir, $maxtree);
+	} else {
+		mkdir($maxtree);
+	}
+};
+
+for my $f (keys %dependencies) {
+	my $d = $ARGV[1] . '/' . &getdir($ARGV[2]) . '/' . $f;
+	my $dd = &getdir($d);
+	if (index($dd, '/') >= 0) {
+		my $t = substr($dd, 0, (index $dd, "/"));
+		$t =~ s#/(\./)+#/#g;
+		$dd =~ s#/(\./)+#/#g;
+		&create_dirtree($t, $dd);
+	}
+	copy($f, $d);
 }

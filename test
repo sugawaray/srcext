@@ -1,0 +1,21 @@
+#! /bin/sh -
+
+failure() {
+	exit 1
+}
+
+rm -R ./dest1
+mkdir ./dest1
+perl ./srcext.pl -d ./dest1 ./sample.c
+
+cmp ./sample.c ./dest1/sample.c
+if [ $? -ne 0 ]
+then
+	failure
+fi
+
+cmp ./dir1/file1 ./dest1/dir1/file1
+if [ $? -ne 0 ]
+then
+	failure
+fi
