@@ -110,21 +110,32 @@ sub create_dirtree {
 	mkdir($dir);
 	my $p = index($maxtree, '/', length($dir) + 1);
 	if ($p >= 0) {
-		$dir = substr($maxtree, 0, $p + length($dir));
+		$dir = substr($maxtree, 0, $p);
 		&create_dirtree($dir, $maxtree);
 	} else {
 		mkdir($maxtree);
 	}
 };
 
-for my $f (keys %dependencies) {
-	my $d = $ARGV[1] . '/' . &getdir($ARGV[2]) . '/' . $f;
-	my $dd = &getdir($d);
+sub cleanpath {
+	my ($s) = @_;
+	$s =~ s#/(\./)+#/#g;
+	return $s;
+};
+
+&cleanpath("./././dir1") eq './dir1' or die 'cleanpath1';
+
+sub copyfile {
+	my ($f) = @_;
+	my $d = &cleanpath($ARGV[1] . '/' . &getdir($ARGV[2]) . '/' . $f);
+	my $dd = &cleanpath(&getdir($d));
 	if (index($dd, '/') >= 0) {
 		my $t = substr($dd, 0, (index $dd, "/"));
-		$t =~ s#/(\./)+#/#g;
-		$dd =~ s#/(\./)+#/#g;
 		&create_dirtree($t, $dd);
 	}
 	copy($f, $d);
+};
+
+for my $f (keys %dependencies) {
+	&copyfile($f);
 }
