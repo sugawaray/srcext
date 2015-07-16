@@ -1,9 +1,6 @@
 use strict;
 
 my @incpath = ( 'incdir1', 'incdir2' );
-scalar @incpath == 2 or die 'incpath1';
-$incpath[1] eq 'incdir2' or die 'incpath2';
-
 my $rpath = '("[^"]+"|<[^>]+>)';
 my $rinclude = '^#include\s+' . $rpath;
 
@@ -15,6 +12,12 @@ sub isabs {
 	} else {
 		return 0;
 	}
+};
+
+sub basename {
+	my ($s) = @_;
+	$s =~ s#.*/([^/]*)$#$1#;
+	return $s;
 };
 
 sub rmparen {

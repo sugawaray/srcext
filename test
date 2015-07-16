@@ -1,11 +1,25 @@
 #! /bin/sh -
 
+if [ $# != 0 ]
+then
+	set -x
+fi
+
 failure() {
 	exit 1
 }
 
-rm -R ./dest1
-mkdir ./dest1
+newdir() {
+	rm -R "${1}"
+	mkdir "${1}"
+}
+
+reset() {
+	newdir ./dest1
+	newdir ./destabs1
+}
+
+reset
 perl ./srcextcmd.pl -d ./dest1 -a ./destabs1 ./sample.c
 
 cmp ./sample.c ./dest1/sample.c
@@ -15,6 +29,22 @@ then
 fi
 
 cmp ./dir1/file1 ./dest1/dir1/file1
+if [ $? -ne 0 ]
+then
+	failure
+fi
+
+reset
+perl ./srcextcmd.pl -d ./dest1 -a ./destabs1 ./inputs/simple.c	\
+	./inputs/simple2.c
+
+cmp ./inputs/file1 ./dest1/inputs/file1
+if [ $? -ne 0 ]
+then
+	failure
+fi
+
+cmp ./inputs/file2 ./dest1/inputs/file2
 if [ $? -ne 0 ]
 then
 	failure
