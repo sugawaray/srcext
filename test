@@ -6,7 +6,7 @@ failure() {
 
 rm -R ./dest1
 mkdir ./dest1
-perl ./srcext.pl -d ./dest1 ./sample.c
+perl ./srcextcmd.pl -d ./dest1 ./sample.c
 
 cmp ./sample.c ./dest1/sample.c
 if [ $? -ne 0 ]

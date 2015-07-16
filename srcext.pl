@@ -1,5 +1,3 @@
-#! /usr/bin/perl -W
-
 use strict;
 
 my @incpath = ( 'incdir1', 'incdir2' );
@@ -27,19 +25,25 @@ sub rmparen {
 !&isabs("\"file1\"") or die "isabs1";
 &isabs("<file1>") or die "isabs2";
 
+sub cleanpath {
+	my ($s) = @_;
+	$s =~ s#/(\./)+#/#g;
+	return $s;
+};
+
+&cleanpath("./././dir1") eq './dir1' or die 'cleanpath1';
+
 # This subroutine collects files which the 1st argument file includes
 # and inserts them into the 2nd argument hash.
 sub collect {
-	my ($file, $deps) = @_;
-	my @d = ();
-	$deps->{$file} = \@d;
+	my ($file, $buf) = @_;
 	my $in;
 	open($in, '<', $file) or return 1;
 	while (<$in>) {
 		chomp;
 		if (/$rinclude/) {
 			s/$rinclude.*/$1/;
-			push @d, $_;
+			push @$buf, $_;
 		}
 	}
 	close $in or die "can not close the input file.";
@@ -64,44 +68,34 @@ sub getdir {
 # include, recursively. It inserts all collected files into the 2nd argument
 # hash.
 sub collect_recur {
-	my ($file, $deps, $dir) = @_;
+	my ($file, $dir, $deps, $absdeps) = @_;
 	my $abs = &isabs($file);
+	my $deplist;
 	$file = &rmparen($file);
 	if ($abs) {
 		my $tmp;
 		for (my $i = 0; $i < scalar @incpath; ++$i) {
-			$tmp = $incpath[$i] . '/' . $file;
-			if (&collect($tmp, $deps) == 0) {
+			my @d = ();
+			$tmp = &cleanpath($incpath[$i] . '/' . $file);
+			if (&collect($tmp, \@d) == 0) {
+				$absdeps->{$tmp} = \@d;
 				last;
 			}
 		}
 		$file = $tmp;
+		$deplist = %{$absdeps}{$file};
 	} else {
-		$file = $dir . '/' . $file;
-		&collect($file, $deps);
+		my @d = ();
+		$file = &cleanpath($dir . '/' . $file);
+		&collect($file, \@d);
+		$deps->{$file} = \@d;
+		$deplist = %{$deps}{$file};
 	}
-	my $deplist = %{$deps}{$file};
 	for (my $i = 0; $i < scalar @{$deplist}; ++$i) {
-		&collect_recur(@{$deplist}[$i], $deps, &getdir($file));
+		&collect_recur(@{$deplist}[$i], &getdir($file),
+			$deps, $absdeps);
 	}
 };
-
-# The key is an absolute path of a file.
-# The value is a list of files which the file of the key includes.
-my %dependencies = ();
-&collect_recur('"' . $ARGV[2] . '"', \%dependencies, &getdir($ARGV[2]));
-
-for my $file (keys %dependencies) {
-	printf "%s:", $file;
-	my $d = $dependencies{$file};
-	for (my $i = 0; $i < scalar @{$d} - 1; ++$i) {
-		printf "%s, ", @{$d}[$i];
-	}
-	if (scalar @{$d} != 0) {
-		printf "%s", @{$d}[scalar @{$d} - 1];
-	}
-	printf "\n";
-}
 
 use File::Copy;
 
@@ -117,14 +111,6 @@ sub create_dirtree {
 	}
 };
 
-sub cleanpath {
-	my ($s) = @_;
-	$s =~ s#/(\./)+#/#g;
-	return $s;
-};
-
-&cleanpath("./././dir1") eq './dir1' or die 'cleanpath1';
-
 sub copyfile {
 	my ($f) = @_;
 	my $d = &cleanpath($ARGV[1] . '/' . &getdir($ARGV[2]) . '/' . $f);
@@ -136,6 +122,4 @@ sub copyfile {
 	copy($f, $d);
 };
 
-for my $f (keys %dependencies) {
-	&copyfile($f);
-}
+1;
