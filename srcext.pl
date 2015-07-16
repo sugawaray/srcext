@@ -111,15 +111,4 @@ sub create_dirtree {
 	}
 };
 
-sub copyfile {
-	my ($f) = @_;
-	my $d = &cleanpath($ARGV[1] . '/' . &getdir($ARGV[2]) . '/' . $f);
-	my $dd = &cleanpath(&getdir($d));
-	if (index($dd, '/') >= 0) {
-		my $t = substr($dd, 0, (index $dd, "/"));
-		&create_dirtree($t, $dd);
-	}
-	copy($f, $d);
-};
-
 1;
