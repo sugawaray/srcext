@@ -77,22 +77,32 @@ sub collect_recur {
 	$file = &rmparen($file);
 	if ($abs) {
 		my $tmp;
-		for (my $i = 0; $i < scalar @incpath; ++$i) {
+		my $i;
+		for ($i = 0; $i < scalar @incpath; ++$i) {
 			my @d = ();
 			$tmp = &cleanpath($incpath[$i] . '/' . $file);
-			if (&collect($tmp, \@d) == 0) {
-				$absdeps->{$tmp} = \@d;
-				last;
+			if (!defined $absdeps->{$tmp}) {
+				if (&collect($tmp, \@d) == 0) {
+					$absdeps->{$tmp} = \@d;
+					last;
+				}
 			}
 		}
-		$file = $tmp;
-		$deplist = %{$absdeps}{$file};
+		if ($i < scalar @incpath) {
+			$file = $tmp;
+			$deplist = $absdeps->{$file};
+		}
 	} else {
 		my @d = ();
 		$file = &cleanpath($dir . '/' . $file);
-		&collect($file, \@d);
-		$deps->{$file} = \@d;
-		$deplist = %{$deps}{$file};
+		if (!defined $deps->{$file}) {
+			&collect($file, \@d);
+			$deps->{$file} = \@d;
+			$deplist = $deps->{$file};
+		}
+	}
+	if (!defined($deplist)) {
+		return;
 	}
 	for (my $i = 0; $i < scalar @{$deplist}; ++$i) {
 		&collect_recur(@{$deplist}[$i], &getdir($file),
