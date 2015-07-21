@@ -1,9 +1,17 @@
 use strict;
 
+use Getopt::Std;
+
+our($opt_d, $opt_a);
+
 sub getconf {
 	my ($a) = @_;
-	my @sl = ($a->[4]);
-	my %r = ( 'dest' => $a->[1], 'absdest' => $a->[3], 'srclist' => \@sl );
+	undef $opt_d;
+	undef $opt_a;
+	@ARGV = @{$a};
+	getopts('d:a:');
+	my @sl = @ARGV;
+	my %r = ( 'dest' => $opt_d, 'absdest' => $opt_a, 'srclist' => \@sl );
 	return \%r;
 };
 

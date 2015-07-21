@@ -1,5 +1,11 @@
 use strict;
 
+#my @b = (1, 2, 3, 4, 5);
+#@b = @b[1..$#b];
+#foreach (@b) {
+#	print $_ . ", ";
+#}
+
 # This script tests the script below.
 require "./srcext.pl";
 
@@ -24,7 +30,6 @@ my $c;	# config reference
 my @sl;	# source list
 
 $c = &getconf(&genarg());
-defined $c->{'absdest'} or die 3;
 
 @sl = @{$c->{'srclist'}};
 defined $sl[0] or die 5;
@@ -43,3 +48,9 @@ $c->{'absdest'} eq './destabs2' or die 9;
 $sl[0] eq 'file2' or die 10;
 @sl = @{&getconf(&setat(&genarg(), $SRC1ST, 'file1'))->{'srclist'}};
 $sl[0] eq 'file1' or die 11;
+
+my @a;	# tmp array
+@a = @{&genarg()};
+push @a, ('file2');
+@sl = @{&getconf(\@a)->{'srclist'}};
+scalar @sl == 2 or die 12;
