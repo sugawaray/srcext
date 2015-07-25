@@ -52,9 +52,26 @@ sub getconf_test {
 }
 &getconf_test();
 
+my $sa;
+
+&normpath('') eq '.' or die '30';
+($sa = &normpath('ab')) eq 'ab' or printf("%s\n", $sa) and die '31';
+($sa = &normpath('.')) eq '.' or printf("%s\n", $sa) and die '32';
+&normpath('..') eq '..' or die '33';
+&normpath('ab/cd/de') eq 'ab/cd/de' or die '34';
+&normpath('././ab') eq 'ab' or die '35';
+&normpath('./.') eq '.' or die '36';
+&normpath('ab/cd/../../de') eq 'de' or die '37';
+&normpath('..') eq '..' or die '38';
+&normpath('ab/..') eq '.' or die '39';
+&normpath('ab/../..') eq '..' or die '40';
+($sa = &normpath('ab/../../..')) eq '../..' or printf("%s\n", $sa) and die '41';
+
+($sa = &genkey('.', '"ab"')) eq './ab' or printf("%s\n", $sa) and die '20';
+#($sa = &genkey('.', '"./ab"')) eq './ab' or printf("%s\n", $sa) and die '21';
+
 use Errno;
 
-my $sa;
 my %ha;
 my %hb;
 my $TESTDIR = 'testdir';
@@ -63,6 +80,7 @@ $! = 0;
 if (!mkdir $TESTDIR) {
 	$! == $!{EEXIST} or die 'test 1';
 }
+$sa = undef;
 open($sa, '>', "$TESTDIR/a") or die 'test 2';
 close($sa);
 &collect_recur('"a"', $TESTDIR, \%ha, \%hb);
