@@ -64,28 +64,45 @@ my $sa;
 &normpath('ab/cd/../../de') eq 'de' or die '37';
 &normpath('..') eq '..' or die '38';
 &normpath('ab/..') eq '.' or die '39';
-&normpath('ab/../..') eq '..' or die '40';
-($sa = &normpath('ab/../../..')) eq '../..' or printf("%s\n", $sa) and die '41';
+&normpath('ab/../..') eq '..' or die '3A';
+($sa = &normpath('ab/../../..')) eq '../..' or printf("%s\n", $sa) and die '3B';
 
 ($sa = &genkey('.', '"ab"')) eq 'ab' or printf("%s\n", $sa) and die '20';
 ($sa = &genkey('.', '"./ab"')) eq 'ab' or printf("%s\n", $sa) and die '21';
 
 use Errno;
 
-my %ha;
-my %hb;
 my $TESTDIR = 'testdir';
-my @INCDIRS;
-$! = 0;
-if (!mkdir $TESTDIR) {
-	$! == $!{EEXIST} or die 'test 1';
-}
-$sa = undef;
-open($sa, '>', "$TESTDIR/a") or die 'test 2';
-close($sa);
-&collect_recur('"a"', $TESTDIR, \%ha, \%hb);
+sub createempty {
+	my ($n) = @_;
+	my $r;
+	$! = 0;
+	if (!mkdir $TESTDIR) {
+		$! == $!{EEXIST} or die 'createempty 1';
+	}
+	open($r, '>', "$TESTDIR/$n") or die 'createempty 2';
+	return $r;
+};
 
 my @aa;
+close(&createempty('a'));
+&collect("$TESTDIR/a", \@aa);
+@aa == 0 or die '40';
+
+$sa = &createempty('a');
+print $sa "#include \"bb\"\n";
+close($sa);
+@aa = ();
+&collect("$TESTDIR/a", \@aa);
+@aa == 1 or die '41';
+$aa[0] eq '"bb"' or die '42';
+
+my %ha;
+my %hb;
+my @INCDIRS;
+close(&createempty('a'));
+&collect_recur('"a"', $TESTDIR, \%ha, \%hb);
+
 @aa = keys %ha;
 @aa == 1 or die '10';
 $aa[0] eq &genkey($TESTDIR, '"a"') or die '11';
@@ -95,3 +112,17 @@ my @ab;
 @ab == 0 or die '12';
 
 keys %hb == 0 or die '14';
+
+#$sa = &createempty('a');
+#print $sa '#include "b"\n';
+#close($sa);
+#%ha = ();
+#%hb = ();
+#&collect_recur('"a"', $TESTDIR, \%ha, %hb);
+#@aa = sort(keys %ha);
+#@aa == 2 or die '15';
+#@ab = @{$ha{$aa[0]}};
+#@ab == 1 or die '16';
+#$ab[0] eq '"b"' or die '17';
+#@ab = @{$ha{$aa[1]}};
+#@ab == 0 or die '18';

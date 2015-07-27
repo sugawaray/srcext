@@ -46,10 +46,24 @@ sub genkey {
 	return &normpath($d . '/' . $name);
 }
 
+sub collect {
+	my ($file, $list) = @_;
+	my $in;
+	open($in, '<', $file);
+	while (<$in>) {
+		chomp;
+		if (/^#include\s+/) {
+			s/^#include ("[^"]+").*/$1/;
+			push @$list, ($_);
+		}
+	}
+	close($in);
+};
+
 sub collect_recur {
-	my ($a, $b, $c, $d) = @_;
+	my ($path, $basedir, $deps, $absdeps) = @_;
 	my @v = ();
-	$c->{&genkey($b, $a)} = \@v;
+	$deps->{&genkey($basedir, $path)} = \@v;
 }
 
 1;
