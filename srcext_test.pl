@@ -67,8 +67,8 @@ my $sa;
 &normpath('ab/../..') eq '..' or die '40';
 ($sa = &normpath('ab/../../..')) eq '../..' or printf("%s\n", $sa) and die '41';
 
-($sa = &genkey('.', '"ab"')) eq './ab' or printf("%s\n", $sa) and die '20';
-#($sa = &genkey('.', '"./ab"')) eq './ab' or printf("%s\n", $sa) and die '21';
+($sa = &genkey('.', '"ab"')) eq 'ab' or printf("%s\n", $sa) and die '20';
+($sa = &genkey('.', '"./ab"')) eq 'ab' or printf("%s\n", $sa) and die '21';
 
 use Errno;
 
@@ -84,5 +84,14 @@ $sa = undef;
 open($sa, '>', "$TESTDIR/a") or die 'test 2';
 close($sa);
 &collect_recur('"a"', $TESTDIR, \%ha, \%hb);
-keys %ha == 1 or die '10';
-keys %hb == 0 or die '11';
+
+my @aa;
+@aa = keys %ha;
+@aa == 1 or die '10';
+$aa[0] eq &genkey($TESTDIR, '"a"') or die '11';
+
+my @ab;
+@ab = @{$ha{$aa[0]}};
+@ab == 0 or die '12';
+
+keys %hb == 0 or die '14';

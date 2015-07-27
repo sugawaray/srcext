@@ -43,12 +43,13 @@ sub normpath {
 sub genkey {
 	my ($d, $name) = @_;
 	$name =~ s/"//g;
-	return $d . '/' . $name;
+	return &normpath($d . '/' . $name);
 }
 
 sub collect_recur {
 	my ($a, $b, $c, $d) = @_;
-	$c->{$a} = 1;
+	my @v = ();
+	$c->{&genkey($b, $a)} = \@v;
 }
 
 1;
