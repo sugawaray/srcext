@@ -53,7 +53,7 @@ sub collect {
 	while (<$in>) {
 		chomp;
 		if (/^#include\s+/) {
-			s/^#include ("[^"]+").*/$1/;
+			s/^#include ("[^"]+"|<[^>]+>).*/$1/;
 			push @$list, ($_);
 		}
 	}
@@ -63,7 +63,13 @@ sub collect {
 sub collect_recur {
 	my ($path, $basedir, $deps, $absdeps) = @_;
 	my @v = ();
-	$deps->{&genkey($basedir, $path)} = \@v;
+	my $file = &genkey($basedir, $path);
+	&collect($file, \@v);
+	$deps->{$file} = \@v;
+	my $i;
+	for ($i = 0; $i < @v; ++$i) {
+		&collect_recur($v[$i], $basedir, $deps, $absdeps);
+	}
 }
 
 1;
