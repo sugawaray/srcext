@@ -68,7 +68,9 @@ sub collect_recur {
 	$deps->{$file} = \@v;
 	my $i;
 	for ($i = 0; $i < @v; ++$i) {
-		&collect_recur($v[$i], $basedir, $deps, $absdeps);
+		my $t = $file;
+		$t =~ s#/[^/]*$##;
+		&collect_recur($v[$i], $t, $deps, $absdeps);
 	}
 }
 
