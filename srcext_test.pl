@@ -113,50 +113,65 @@ close(&createempty('a'));
 $aa[0] eq &genkey($TESTDIR, '"a"') or die '11';
 
 my @ab;
+my @ac;
 @ab = @{$ha{$aa[0]}};
 @ab == 0 or die '12';
 
 keys %hb == 0 or die '14';
 
+sub createfile {
+	my ($path, $content) = @_;
+	my $t = &createempty($path);
+	if (defined($content)) {
+		print $t $content;
+	}
+	close($t);
+}
+
+sub assertarray {
+	my ($t, $tt, $m) = @_;
+	my @in = @{$t};
+	my @expected = @{$tt};
+	my $i;
+	@in == @expected or die $m;
+	for ($i = 0; $i < @in; ++$i) {
+		if ($in[$i] ne $expected[$i]) {
+			printf("expect(%s) but (%s)\n", $expected[$i], $in[$i]);
+			die $m;
+		}
+	}
+}
+
 use File::Path qw(make_path);
 make_path("${TESTDIR}/dir1");
-$sa = &createempty('a');
-print $sa "#include \"b\"\n";
-print $sa "#include \"dir1/c\"\n";
-close($sa);
-close(&createempty('b'));
-close(&createempty('dir1/c'));
+&createfile('a',
+	"#include \"b\"\n" .
+	"#include \"dir1/c\"\n");
+&createfile('b');
+&createfile('dir1/c');
 %ha = ();
 %hb = ();
 &collect_recur('"a"', $TESTDIR, \%ha, \%hb);
 @aa = sort(keys %ha);
-@aa == 3 or die '15';
-$aa[0] eq "${TESTDIR}/a" or die '16';
-$aa[1] eq "${TESTDIR}/b" or die '17';
-$aa[2] eq "${TESTDIR}/dir1/c" or print $aa[2] and die '18';
-@ab = @{$ha{$aa[0]}};
-@ab = sort(@ab);
-@ab == 2 or die '19';
-$ab[0] eq '"b"' or die '1A';
-$ab[1] eq '"dir1/c"' or die '1B';
+@ab = ("${TESTDIR}/a", "${TESTDIR}/b", "${TESTDIR}/dir1/c");
+&assertarray(\@aa, \@ab, '16');
+@ab = sort(@{$ha{$aa[0]}});
+@ac = ('"b"', '"dir1/c"');
+&assertarray(\@ab, \@ac, '18');
 @ab = @{$ha{$aa[1]}};
 @ab == 0 or die '1C';
 @ab = @{$ha{$aa[2]}};
 @ab == 0 or die '1D';
 
-use File::Path qw(make_path);
 make_path("${TESTDIR}/dir1");
-$sa = &createempty('dir1/a');
-print $sa "#include \"b\"\n";
-close($sa);
-close(&createempty('dir1/b'));
+&createfile('dir1/a', "#include \"b\"\n");
+&createfile('dir1/b');
 %ha = ();
 %hb = ();
 &collect_recur('"dir1/a"', $TESTDIR, \%ha, \%hb);
 @aa = sort(keys %ha);
-@aa == 2 or die '2B';
-$aa[0] eq "${TESTDIR}/dir1/a" or die '2C';
-$aa[1] eq "${TESTDIR}/dir1/b" or die '2D';
+@ab = ("${TESTDIR}/dir1/a", "${TESTDIR}/dir1/b");
+&assertarray(\@aa, \@ab, '2C');
 @ab = @{$ha{$aa[0]}};
 @ab == 1 or die '2E';
 $ab[0] eq '"b"' or print $ab[0] and die '2F';
