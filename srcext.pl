@@ -18,6 +18,9 @@ sub getconf {
 sub normpath {
 	my ($a) = @_;
 	my (@l, @m, $i, $r);
+	if ($a eq '/') {
+		return $a;
+	}
 	@l = split /\//, $a;
 	for ($i = 0; $i < @l; ++$i) {
 		if ($l[$i] eq '.') {
@@ -40,9 +43,27 @@ sub normpath {
 	return $r;
 }
 
+sub dirname {
+	my ($a) = @_;
+	if ($a eq '/') {
+		return $a;
+	}
+	$a =~ s#/[^/]*$##;
+	return &normpath($a);
+}
+
+sub isabs {
+	my ($a) = @_;
+	return $a =~ /<[^>]+>/;
+}
+
 sub genkey {
 	my ($d, $name) = @_;
-	$name =~ s/"//g;
+	if (&isabs($name)) {
+		$name =~ s/<([^>]+)>/$1/;
+	} else {
+		$name =~ s/"//g;
+	}
 	return &normpath($d . '/' . $name);
 }
 
@@ -61,16 +82,24 @@ sub collect {
 };
 
 sub collect_recur {
-	my ($path, $basedir, $deps, $absdeps) = @_;
+	my ($path, $basedir, $deps, $absbase, $absdeps) = @_;
 	my @v = ();
-	my $file = &genkey($basedir, $path);
+	my $file;
+	if (!&isabs($path)) {
+		$file = &genkey($basedir, $path);
+	} else {
+		$file = &genkey($absbase, $path);
+	}
 	&collect($file, \@v);
-	$deps->{$file} = \@v;
+	if (!&isabs($path)) {
+		$deps->{$file} = \@v;
+	} else {
+		$absdeps->{$file} = \@v;
+	}
 	my $i;
 	for ($i = 0; $i < @v; ++$i) {
-		my $t = $file;
-		$t =~ s#/[^/]*$##;
-		&collect_recur($v[$i], $t, $deps, $absdeps);
+		my $t = &dirname($file);
+		&collect_recur($v[$i], $t, $deps, $absbase, $absdeps);
 	}
 }
 
