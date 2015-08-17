@@ -70,7 +70,7 @@ sub genkey {
 sub collect {
 	my ($file, $list) = @_;
 	my $in;
-	open($in, '<', $file);
+	open($in, '<', $file) or return 1;
 	while (<$in>) {
 		chomp;
 		if (/^#include\s+/) {
@@ -79,6 +79,7 @@ sub collect {
 		}
 	}
 	close($in);
+	return 0;
 };
 
 sub collect_recur {

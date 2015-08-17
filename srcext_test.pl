@@ -103,8 +103,9 @@ sub createempty {
 
 my @aa;
 close(&createempty('a'));
-&collect("$TESTDIR/a", \@aa);
-@aa == 0 or die '40';
+$sa = &collect("$TESTDIR/a", \@aa);
+$sa == 0 or die '40';
+@aa == 0 or die '41';
 
 $sa = &createempty('a');
 print $sa "#include \"bb\"\n";
@@ -112,12 +113,16 @@ print $sa "#include \"cc\"\n";
 print $sa "#include \<dd\>\n";
 close($sa);
 @aa = ();
-&collect("$TESTDIR/a", \@aa);
+$sa = &collect("$TESTDIR/a", \@aa);
+$sa == 0 or die '42';
 @aa = sort(@aa);
-@aa == 3 or die '41';
-$aa[0] eq '"bb"' or die '42';
-$aa[1] eq '"cc"' or die '43';
-$aa[2] eq '<dd>' or die '44';
+@aa == 3 or die '43';
+$aa[0] eq '"bb"' or die '44';
+$aa[1] eq '"cc"' or die '45';
+$aa[2] eq '<dd>' or die '46';
+
+unlink "$TESTDIR/a";
+(&collect("$TESTDIR/a", \@aa) == 1) or die '47';
 
 my %ha;
 my %hb;
