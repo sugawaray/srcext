@@ -82,25 +82,40 @@ sub collect {
 	return 0;
 };
 
+sub collect_in_absdirs {
+	my ($path, $dirs, $list) = @_;
+	my $i;
+	my $file;
+	for ($i = 0; $i < @{$dirs}; ++$i) {
+		$file = &genkey(@{$dirs}[$i], $path);
+		if (&collect($file, $list) == 0) {
+			last;
+		}
+	}
+	return $i;
+}
+
 sub collect_recur {
-	my ($path, $basedir, $deps, $absbase, $absdeps) = @_;
+	my ($path, $basedir, $deps, $absbaselist, $absdeps) = @_;
 	my @v = ();
 	my $file;
 	if (!&isabs($path)) {
 		$file = &genkey($basedir, $path);
-	} else {
-		$file = &genkey($absbase, $path);
-	}
-	&collect($file, \@v);
-	if (!&isabs($path)) {
+		&collect($file, \@v);
 		$deps->{$file} = \@v;
 	} else {
+		my $i = &collect_in_absdirs($path, $absbaselist, \@v);
+		if ($i == @{$absbaselist}) {
+			print STDERR "could not find any file of " . $path . ".\n";
+			return;
+		}
+		$file = &genkey(@{$absbaselist}[$i], $path);
 		$absdeps->{$file} = \@v;
 	}
 	my $i;
 	for ($i = 0; $i < @v; ++$i) {
 		my $t = &dirname($file);
-		&collect_recur($v[$i], $t, $deps, $absbase, $absdeps);
+		&collect_recur($v[$i], $t, $deps, $absbaselist, $absdeps);
 	}
 }
 

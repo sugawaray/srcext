@@ -86,6 +86,8 @@ use Errno;
 
 my $TESTDIR = 'testdir';
 my $ABSDIR = 'absdir';
+my $ABSDIR1 = 'absdir1';
+my @ABSDIRLIST = ($ABSDIR);
 sub createemptyindir {
 	my ($n, $dir) = @_;
 	my $r;
@@ -127,19 +129,22 @@ unlink "$TESTDIR/a";
 my %ha;
 my %hb;
 my @INCDIRS;
-close(&createempty('a'));
-&collect_recur('"a"', $TESTDIR, \%ha, $ABSDIR, \%hb);
-
-@aa = keys %ha;
-@aa == 1 or die '10';
-$aa[0] eq &genkey($TESTDIR, '"a"') or die '11';
-
 my @ab;
 my @ac;
-@ab = @{$ha{$aa[0]}};
-@ab == 0 or die '12';
 
-keys %hb == 0 or die '14';
+sub t_collect_recur_1 {
+	close(&createempty('a'));
+	&collect_recur('"a"', $TESTDIR, \%ha, \@ABSDIRLIST, \%hb);
+
+	@aa = keys %ha;
+	@aa == 1 or die '10';
+	$aa[0] eq &genkey($TESTDIR, '"a"') or die '11';
+	
+	@ab = @{$ha{$aa[0]}};
+	@ab == 0 or die '12';
+	keys %hb == 0 or die '14';
+}
+&t_collect_recur_1();
 
 sub createfileindir {
 	my ($path, $content, $dir) = @_;
@@ -149,6 +154,7 @@ sub createfileindir {
 	}
 	close($t);
 }
+
 sub createfile {
 	my ($path, $content) = @_;
 	&createfileindir($path, $content, $TESTDIR);
@@ -169,77 +175,169 @@ sub assertarray {
 }
 
 use File::Path qw(make_path);
-make_path("${TESTDIR}/dir1");
-&createfile('a',
-	"#include \"b\"\n" .
-	"#include \"dir1/c\"\n");
-&createfile('b');
-&createfile('dir1/c');
-%ha = ();
-%hb = ();
-&collect_recur('"a"', $TESTDIR, \%ha, $ABSDIR, \%hb);
-@aa = sort(keys %ha);
-@ab = ("${TESTDIR}/a", "${TESTDIR}/b", "${TESTDIR}/dir1/c");
-&assertarray(\@aa, \@ab, '16');
-@ab = sort(@{$ha{$aa[0]}});
-@ac = ('"b"', '"dir1/c"');
-&assertarray(\@ab, \@ac, '18');
-@ab = @{$ha{$aa[1]}};
-@ab == 0 or die '1C';
-@ab = @{$ha{$aa[2]}};
-@ab == 0 or die '1D';
 
-make_path("${TESTDIR}/dir1");
-&createfile('dir1/a', "#include \"b\"\n");
-&createfile('dir1/b');
-%ha = ();
-%hb = ();
-&collect_recur('"dir1/a"', $TESTDIR, \%ha, $ABSDIR, \%hb);
-@aa = sort(keys %ha);
-@ab = ("${TESTDIR}/dir1/a", "${TESTDIR}/dir1/b");
-&assertarray(\@aa, \@ab, '2C');
-@ab = @{$ha{$aa[0]}};
-@ab == 1 or die '2E';
-$ab[0] eq '"b"' or print $ab[0] and die '2F';
-@ab = @{$ha{$aa[1]}};
-@ab == 0 or die '2G';
+sub t_collect_recur_2 {
+	make_path("${TESTDIR}/dir1");
+	&createfile('a',
+		"#include \"b\"\n" .
+		"#include \"dir1/c\"\n");
+	&createfile('b');
+	&createfile('dir1/c');
+	%ha = ();
+	%hb = ();
+	&collect_recur('"a"', $TESTDIR, \%ha, \@ABSDIRLIST, \%hb);
+	@aa = sort(keys %ha);
+	@ab = ("${TESTDIR}/a", "${TESTDIR}/b", "${TESTDIR}/dir1/c");
+	&assertarray(\@aa, \@ab, '16');
+	@ab = sort(@{$ha{$aa[0]}});
+	@ac = ('"b"', '"dir1/c"');
+	&assertarray(\@ab, \@ac, '18');
+	@ab = @{$ha{$aa[1]}};
+	@ab == 0 or die '1C';
+	@ab = @{$ha{$aa[2]}};
+	@ab == 0 or die '1D';
+}
+&t_collect_recur_2();
 
-make_path("${TESTDIR}");
-&createfile('a', "#include \"b\"\n");
-&createfile('b', "#include \"c\"\n");
-&createfile('c');
-%ha = ();
-%hb = ();
-&collect_recur('"a"', $TESTDIR, \%ha, $ABSDIR, \%hb);
-@aa = sort(keys %ha);
-@ab = ("${TESTDIR}/a", "${TESTDIR}/b", "${TESTDIR}/c");
-&assertarray(\@aa, \@ab, '2H');
-@ab = @{$ha{$aa[0]}};
-@ac = ('"b"');
-&assertarray(\@ab, \@ac, '2I');
-@ab = @{$ha{$aa[1]}};
-@ac = ('"c"');
-&assertarray(\@ab, \@ac, '2K');
-@ab = @{$ha{$aa[2]}};
-@ac = ();
-&assertarray(\@ab, \@ac, '2M');
+sub t_collect_recur_3 {
+	make_path("${TESTDIR}/dir1");
+	&createfile('dir1/a', "#include \"b\"\n");
+	&createfile('dir1/b');
+	%ha = ();
+	%hb = ();
+	&collect_recur('"dir1/a"', $TESTDIR, \%ha, \@ABSDIRLIST, \%hb);
+	@aa = sort(keys %ha);
+	@ab = ("${TESTDIR}/dir1/a", "${TESTDIR}/dir1/b");
+	&assertarray(\@aa, \@ab, '2C');
+	@ab = @{$ha{$aa[0]}};
+	@ab == 1 or die '2E';
+	$ab[0] eq '"b"' or print $ab[0] and die '2F';
+	@ab = @{$ha{$aa[1]}};
+	@ab == 0 or die '2G';
+}
+&t_collect_recur_3();
 
-make_path("${TESTDIR}");
-make_path("${ABSDIR}");
-&createfile('a', "#include <b>\n");
-&createfileindir('b', "", ${ABSDIR});
-%ha = ();
-%hb = ();
-&collect_recur('"a"', $TESTDIR, \%ha, $ABSDIR, \%hb);
-@aa = sort(keys %ha);
-@ab = ("${TESTDIR}/a");
-&assertarray(\@aa, \@ab, '2N');
-@ab = @{$ha{$aa[0]}};
-@ac = ('<b>');
-&assertarray(\@ab, \@ac, '2P');
-@aa = sort(keys %hb);
-@ab = ("${ABSDIR}/b");
-&assertarray(\@aa, \@ab, '2O');
-@ab = @{$hb{$aa[0]}};
-@ac = ();
-&assertarray(\@ab, \@ac, '2Q');
+sub t_collect_recur_4 {
+	make_path("${TESTDIR}");
+	&createfile('a', "#include \"b\"\n");
+	&createfile('b', "#include \"c\"\n");
+	&createfile('c');
+	%ha = ();
+	%hb = ();
+	&collect_recur('"a"', $TESTDIR, \%ha, \@ABSDIRLIST, \%hb);
+	@aa = sort(keys %ha);
+	@ab = ("${TESTDIR}/a", "${TESTDIR}/b", "${TESTDIR}/c");
+	&assertarray(\@aa, \@ab, '2H');
+	@ab = @{$ha{$aa[0]}};
+	@ac = ('"b"');
+	&assertarray(\@ab, \@ac, '2I');
+	@ab = @{$ha{$aa[1]}};
+	@ac = ('"c"');
+	&assertarray(\@ab, \@ac, '2K');
+	@ab = @{$ha{$aa[2]}};
+	@ac = ();
+	&assertarray(\@ab, \@ac, '2M');
+}
+&t_collect_recur_4();
+
+sub t_collect_recur_5 {
+	make_path("${TESTDIR}");
+	make_path("${ABSDIR}");
+	&createfile('a', "#include <b>\n");
+	&createfileindir('b', "", ${ABSDIR});
+	%ha = ();
+	%hb = ();
+	&collect_recur('"a"', $TESTDIR, \%ha, \@ABSDIRLIST, \%hb);
+	@aa = sort(keys %ha);
+	@ab = ("${TESTDIR}/a");
+	&assertarray(\@aa, \@ab, '2N');
+	@ab = @{$ha{$aa[0]}};
+	@ac = ('<b>');
+	&assertarray(\@ab, \@ac, '2P');
+	@aa = sort(keys %hb);
+	@ab = ("${ABSDIR}/b");
+	&assertarray(\@aa, \@ab, '2O');
+	@ab = @{$hb{$aa[0]}};
+	@ac = ();
+	&assertarray(\@ab, \@ac, '2Q');
+}
+&t_collect_recur_5();
+
+use POSIX qw/opendir readdir closedir/;
+sub rmR {
+	my ($a) = @_;
+	my $d;
+	my @e;
+	my $i;
+	my @r = stat($a);
+	if (@r == 0) {
+		return -1;
+	} elsif (POSIX::S_ISDIR($r[2])) {
+		if ($d = opendir($a)) {
+			@e = &readdir($d);
+			for ($i = 0; $i < @e; ++$i) {
+				if ($e[$i] eq "." || $e[$i] eq "..") {
+					next;
+				}
+				&rmR($a . "/" . $e[$i]);
+			}
+			&closedir($d);
+			undef $d;
+		}
+	} else {
+		unlink $a;
+	}
+	return 0;			
+}
+
+sub t_collect_recur_6 {
+	&rmR("${TESTDIR}");
+	&rmR("${ABSDIR}");
+	make_path("${TESTDIR}");
+	make_path("${ABSDIR}");
+	&createfile('a', "#include \"b\"\n");
+	%ha = ();
+	%hb = ();
+	&collect_recur('"a"', $TESTDIR, \%ha, \@ABSDIRLIST, \%hb);
+	@aa = sort(keys %ha);
+	@ab = ("${TESTDIR}/a", "${TESTDIR}/b");
+	&assertarray(\@aa, \@ab, '30');
+	@ab = @{$ha{$aa[1]}};
+	@ab == 0 or die '31';
+}
+&t_collect_recur_6();
+
+sub t_collect_recur_7 {
+	print "t_collect_recur_7\n";
+	print "The error messages should follow.\n";
+	&rmR("${TESTDIR}");
+	&rmR("${ABSDIR}");
+	make_path("${TESTDIR}");
+	&createfile('a', "#include <b>\n");
+	%ha = ();
+	%hb = ();
+	my @empty = ();
+	&collect_recur('"a"', $TESTDIR, \%ha, \@empty, \%hb);
+	keys %hb == 0 or die '1';
+}
+&t_collect_recur_7();
+
+sub t_collect_recur_8 {
+	print "t_collect_recur_8\n";
+	&rmR("${TESTDIR}");
+	&rmR("${ABSDIR}");
+	&rmR("${ABSDIR1}");
+	make_path("${TESTDIR}");
+	make_path("${ABSDIR}");
+	make_path("${ABSDIR1}");
+	&createfile('a', "#include <b>\n");
+	&createemptyindir('b', $ABSDIR1);
+	%ha = ();
+	%hb = ();
+	my @abslist = ($ABSDIR, $ABSDIR1);
+	&collect_recur('"a"', $TESTDIR, \%ha, \@abslist, \%hb);
+	@aa = sort(keys %hb);
+	@aa == 1 or die '1';
+	$aa[0] eq "${ABSDIR1}/b" or die '2';
+}
+&t_collect_recur_8();
